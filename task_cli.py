@@ -22,3 +22,15 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python task_cli.py <command> [arguments]")
         return
+
+    command = sys.argv[1]
+
+    if command == "add":
+        print("You chose to add a task!")
+    elif command == "list":
+        print("You chose to list tasks!")
+    else:
+        print(f"Unknown command: {command}")
+
+if __name__ == "__main__":
+    main()
