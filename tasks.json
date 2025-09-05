@@ -4,6 +4,13 @@
         "description": "Some task description",
         "status": "todo",
         "createdAt": "2025-09-05T10:03:08",
-        "updatedAt": "2025-09-05T10:03:08"
+        "updatedAt": "2025-09-05T10:03:08",
+        "done": false
+    },
+    {
+        "id": 2,
+        "description": "Finish homework",
+        "done": false,
+        "status": "todo"
     }
 ]
