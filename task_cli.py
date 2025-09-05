@@ -5,10 +5,9 @@ from datetime import datetime
 
 TASKS_FILE = "tasks.json"
 
-
-# ----------------------------
-# Helpers
-# ----------------------------
+# ---------------------------
+# Helpers for file I/O
+# ---------------------------
 def load_tasks():
     if not os.path.exists(TASKS_FILE):
         return []
@@ -18,55 +17,59 @@ def load_tasks():
         except json.JSONDecodeError:
             return []
 
-
 def save_tasks(tasks):
     with open(TASKS_FILE, "w") as f:
-        json.dump(tasks, f, indent=4)
+        json.dump(tasks, f, indent=2)
 
+def now():
+    return datetime.now().isoformat()
 
-# ----------------------------
-# Commands
-# ----------------------------
+# ---------------------------
+# Core Features
+# ---------------------------
 def add_task(description):
     tasks = load_tasks()
+    task_id = len(tasks) + 1
     task = {
-        "id": len(tasks) + 1,
+        "id": task_id,
         "description": description,
-        "done": False,  # new field
-        "status": "todo",  # new field
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "status": "todo",
+        "createdAt": now(),
+        "updatedAt": now()
     }
     tasks.append(task)
     save_tasks(tasks)
-    print(f"Task added: {description}")
-
+    print(f"Task added successfully (ID: {task_id})")
 
 def list_tasks(filter_status=None):
     tasks = load_tasks()
-
     if filter_status:
-        tasks = [t for t in tasks if t.get("status", "todo") == filter_status]
-
+        tasks = [t for t in tasks if t["status"] == filter_status]
     if not tasks:
         print("No tasks found.")
         return
-
     for task in tasks:
-        status = "✓" if task.get("done", False) else "X"
-        print(f"{task['id']}. [{status}] {task['description']} ({task.get('status', 'todo')})")
-
+        print(f"{task['id']}. {task['description']} [{task['status']}]")
 
 def migrate_tasks():
-    """One-time migration to add 'done' and 'status' to old tasks"""
     tasks = load_tasks()
     updated = False
 
     for task in tasks:
-        if "done" not in task:
-            task["done"] = False
+        if "id" not in task:
+            task["id"] = len(tasks) + 1
+            updated = True
+        if "description" not in task:
+            task["description"] = ""
             updated = True
         if "status" not in task:
             task["status"] = "todo"
+            updated = True
+        if "createdAt" not in task:
+            task["createdAt"] = now()
+            updated = True
+        if "updatedAt" not in task:
+            task["updatedAt"] = now()
             updated = True
 
     if updated:
@@ -75,37 +78,78 @@ def migrate_tasks():
     else:
         print("No migration needed.")
 
+def mark_done(task_id):
+    tasks = load_tasks()
+    for task in tasks:
+        if task["id"] == task_id:
+            task["status"] = "done"
+            task["updatedAt"] = now()
+            save_tasks(tasks)
+            print(f"Task {task_id} marked as done!")
+            return
+    print(f"No task found with ID {task_id}")
 
-# ----------------------------
-# Main CLI entry
-# ----------------------------
+# ---------------------------
+# Help / Usage
+# ---------------------------
+def print_help():
+    print("""
+Task Tracker CLI - Commands
+
+Usage:
+  python task_cli.py <command> [arguments]
+
+Commands:
+  add <description>          Add a new task
+  list                       List all tasks
+  list todo                  List only tasks with status 'todo'
+  list in-progress           List only tasks with status 'in-progress'
+  list done                  List only tasks with status 'done'
+  mark-done <task_id>        Mark a task as done
+  migrate                    Fix old tasks.json to ensure required properties
+  help                       Show this help message
+""")
+
+# ---------------------------
+# CLI Entry Point
+# ---------------------------
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python task_cli.py [add|list|migrate] <args>")
+        print_help()
         return
 
     command = sys.argv[1]
 
     if command == "add":
         if len(sys.argv) < 3:
-            print("Usage: python task_cli.py add <task description>")
+            print("Usage: python task_cli.py add <description>")
             return
         description = " ".join(sys.argv[2:])
         add_task(description)
 
     elif command == "list":
-        if len(sys.argv) == 2:
-            list_tasks()
-        else:
-            filter_status = sys.argv[2]
-            list_tasks(filter_status)
+        status = sys.argv[2] if len(sys.argv) > 2 else None
+        list_tasks(status)
 
     elif command == "migrate":
         migrate_tasks()
 
-    else:
-        print("Unknown command. Use add, list, or migrate.")
+    elif command == "mark-done":
+        if len(sys.argv) < 3:
+            print("Usage: python task_cli.py mark-done <task_id>")
+            return
+        try:
+            task_id = int(sys.argv[2])
+            mark_done(task_id)
+        except ValueError:
+            print("Task ID must be a number.")
 
+    elif command == "help":
+        print_help()
+
+    else:
+        print(f"Unknown command: {command}")
+        print("Use: python task_cli.py help")
 
 if __name__ == "__main__":
     main()
